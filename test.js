@@ -1,15 +1,75 @@
 'use strict';
 
-const nock = require('nock');
 const assert = require('assert');
+
+const proxyquire = require('proxyquire').noCallThru();
+
+const assumeAwsCredentials = {
+    Credentials: {
+        AccessKeyId: '',
+    }
+
+};
+const stsMock = {
+    assumeRole: function (options, callback) {
+        callback(null, assumeAwsCredentials);
+    }
+};
+
+const awsSdkMock = {
+    config: {},
+    CloudFront: {
+        Signer: function () {
+            return {
+                getSignedCookie: function (config, callback) {
+                    const cloudFrontSignedCookies = {};
+                    callback(null, cloudFrontSignedCookies);
+                }
+            }
+        }
+    },
+
+    STS: function () {
+        return stsMock;
+    },
+
+    CognitoIdentityCredentials: function () {
+        return {
+            get: function (callback) {
+                callback();
+            }
+        }
+    }
+};
+
+const clientMock = {
+    authorizationUrl: function (options) {
+        return 'http://open-id.test/authorization?redirect_uri=' + options.redirect_uri;
+    }
+};
+
+const issuerMock = {
+    Client: function () {
+        return clientMock;
+    }
+};
+
+const openIdClientMock = {
+    Issuer: {}
+};
+
+proxyquire('./index', {
+    'aws-sdk': awsSdkMock,
+    'openid-client': openIdClientMock
+});
+
 const login = require('./index');
 
-function assert500(httpMock, done, error) {
-    login.handler({}, null, function (ignore, response) {
+function assertResponse(event, done, statusCode, body) {
+    login.handler(event || {}, null, function (ignore, response) {
         try {
-            if (httpMock) httpMock.done();
-            assert.equal(response.body, error);
-            assert.equal(response.statusCode, 500);
+            assert.equal(response.body, body);
+            assert.equal(response.statusCode, statusCode);
             done();
         } catch (e) {
             done(e);
@@ -18,82 +78,94 @@ function assert500(httpMock, done, error) {
 }
 
 const loginProviderHost = 'http://login-provider.test';
-const openIdConfiguration = {
-    "issuer": loginProviderHost,
-    "authorization_endpoint": loginProviderHost + "/oauth/auz/authorize",
-    "token_endpoint": loginProviderHost + "/oauth/oauth20/token",
-    "userinfo_endpoint": loginProviderHost + "/oauth/userinfo",
-    "jwks_uri": loginProviderHost + "/oauth/jwks",
-    "scopes_supported": [
-        "READ",
-        "WRITE",
-        "DELETE",
-        "openid",
-        "scope",
-        "profile",
-        "email",
-        "address",
-        "phone"
-    ],
-    "response_types_supported": ["id_token"],
-    "grant_types_supported": [
-        "authorization_code",
-        "implicit",
-        "password",
-        "client_credentials",
-        "urn:ietf:params:oauth:grant-type:jwt-bearer"
-    ],
-    "subject_types_supported": ["public"],
-    "id_token_signing_alg_values_supported": ["HS256"],
-    "id_token_encryption_alg_values_supported": ["RSA1_5"],
-    "id_token_encryption_enc_values_supported": ["A128CBC-HS256"],
-    "token_endpoint_auth_methods_supported": [
-        "client_secret_post",
-        "client_secret_basic",
-        "client_secret_jwt",
-        "private_key_jwt"
-    ],
-    "token_endpoint_auth_signing_alg_values_supported": ["HS256", "RS256"],
-    "claims_parameter_supported": false,
-    "request_parameter_supported": false,
-    "request_uri_parameter_supported": false
-};
 
 beforeEach(function () {
-    delete process.env.OPEN_ID_DISCOVER_URL;
+    openIdClientMock.Issuer.discover = function () {
+        return new Promise(function (resolve, reject) {
+            resolve(issuerMock);
+        });
+    };
+
+    process.env.OPEN_ID_DISCOVER_URL = loginProviderHost;
     delete process.env.OPEN_ID_LOGIN_URL;
+    delete process.env.OPEN_ID_TARGET_URL;
+    delete process.env.ASSUME_ROLE;
+    delete process.env.COGNITO_IDENTTITY_POOL_ID;
 });
 
 describe('api-gateway-cloudfront-login', function () {
 
     it('response with error if env.OPEN_ID_DISCOVER_URL not configured', function (done) {
-        assert500(null, done, '"process.env.OPEN_ID_DISCOVER_URL not configured!"');
+        delete process.env.OPEN_ID_DISCOVER_URL;
+        assertResponse({}, done, 500, 'env.OPEN_ID_DISCOVER_URL is not configured!');
     });
 
     it('response error if env.OPEN_ID_LOGIN_URL not configured', function (done) {
-        const a = nock(loginProviderHost).log(console.log)
-            .get('/.well-known/openid-configuration').reply(200, openIdConfiguration);
-        process.env.OPEN_ID_DISCOVER_URL = loginProviderHost;
-        assert500(a, done, '"env.OPEN_ID_LOGIN_URL variable is not configured!"');
+        assertResponse(null, done, 500, 'env.OPEN_ID_LOGIN_URL is not configured!');
+    });
+
+    it('response error if env.OPEN_ID_TARGET_URL and customTargetUrl are not configured', function (done) {
+        const event = {queryStringParameters: {id_token: 'sss'}};
+        assertResponse(event, done, 500, 'env.OPEN_ID_TARGET_URL or customTargetUrl not configured!');
+    });
+
+    it('response error if fails during OpenID discover', function (done) {
+        openIdClientMock.Issuer.discover = function () {
+            return new Promise(function (_, reject) {
+                reject('Test error!');
+            });
+        };
+        assertResponse(null, done, 500, 'Test error!');
     });
 
     it('redirect to login provider when id_token not specified', function (done) {
-        // given
-        const a = nock(loginProviderHost).log(console.log)
-            .get('/.well-known/openid-configuration').reply(200, openIdConfiguration);
-        process.env.OPEN_ID_DISCOVER_URL = loginProviderHost;
-        process.env.OPEN_ID_LOGIN_URL = '???';
+        process.env.OPEN_ID_LOGIN_URL = 'back';
+        assertResponse(null, done, 200, '<html><head><meta http-equiv="refresh" content="0; url=http://open-id.test/authorization?redirect_uri=back"/></head><body>Wait a second or <a href="http://open-id.test/authorization?redirect_uri=back">proceed to login</a></body></html>');
+    });
 
-        // when
-        login.handler({}, null, function (ignore, response) {
-            try {
-                a.done();
-                assert.equal(response.body, '"SyntaxError: Unexpected token x"');
-                assert.equal(response.statusCode, 200);
-                done();
-            } catch (e) {
-                done(e);
-            }
+    describe('when valid id_token received redirect with signed cookies and AWS credentials', function () {
+        it('regular', function (done) {
+            process.env.OPEN_ID_DISCOVER_URL = loginProviderHost;
+            process.env.OPEN_ID_LOGIN_URL = '???';
+            process.env.OPEN_ID_TARGET_URL = 'http://target.url';
+            process.env.COGNITO_IDENTTITY_POOL_ID = 'us-east-1:f0fdfdcd-a5b5-4978-ab5c-a49c48d4db60';
+
+            const event = {
+                queryStringParameters: {
+                    id_token: 'sss'
+                }
+            };
+            assertResponse(event, done, 301, null);
+        });
+
+        it('provide additional AWS assumed if requested', function (done) {
+            process.env.OPEN_ID_DISCOVER_URL = loginProviderHost;
+            process.env.OPEN_ID_LOGIN_URL = '???';
+            process.env.OPEN_ID_TARGET_URL = 'http://target.url';
+            process.env.COGNITO_IDENTTITY_POOL_ID = 'us-east-1:f0fdfdcd-a5b5-4978-ab5c-a49c48d4db60';
+            process.env.ASSUME_ROLE = 'assume-role';
+
+            const event = {
+                queryStringParameters: {
+                    id_token: 'sss'
+                }
+            };
+            assertResponse(event, done, 301, null);
+        });
+
+        it('redirect to customTargetUrl if specifiec', function (done) {
+            process.env.OPEN_ID_DISCOVER_URL = loginProviderHost;
+            process.env.OPEN_ID_LOGIN_URL = '???';
+            process.env.OPEN_ID_TARGET_URL = 'http://target.url';
+            process.env.COGNITO_IDENTTITY_POOL_ID = 'us-east-1:f0fdfdcd-a5b5-4978-ab5c-a49c48d4db60';
+
+            const event = {
+                queryStringParameters: {
+                    id_token: 'sss',
+                    customTargetUrl: 'http://custom-target.test'
+                }
+            };
+            assertResponse(event, done, 301, null);
         });
     });
 

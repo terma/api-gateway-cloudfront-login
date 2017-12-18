@@ -4,8 +4,13 @@
   "description": "Login lambda which to generate CloudFront signed cookies and provide API Gateway AWS IAM login",
   "main": "index.js",
   "scripts": {
-    "test": "mocha",
-    "~test": "mocha --watch"
+    "test": "nyc mocha && nyc check-coverage --lines 95 --functions 95 --branches 95",
+    "~test": "mocha --watch",
+    "coverage": "nyc report --reporter=text-lcov | coveralls"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/terma/api-gateway-proxy-lambda"
   },
   "keywords": [
     "AWS",
@@ -26,7 +31,9 @@
     "openid-client": "^1.18.2"
   },
   "devDependencies": {
+    "coveralls": "^3.0.0",
     "mocha": "^4.0.1",
-    "nock": "^9.1.4"
+    "nyc": "^11.3.0",
+    "proxyquire": "^1.8.0"
   }
 }
