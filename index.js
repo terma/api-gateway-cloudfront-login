@@ -5,6 +5,9 @@ process.env.NODE_TLS_REJECT_UNATHORIZED = '0';
 const AWS = require('aws-sdk');
 const Issuer = require('openid-client').Issuer;
 
+let configCache = void 0;
+let issuerPromiseCache = void 0;
+
 function tryCatchResponse(f, callback) {
     try {
         f();
@@ -14,6 +17,8 @@ function tryCatchResponse(f, callback) {
 }
 
 function getConfig() {
+    if (configCache) return configCache;
+
     const config = {
         domain: process.env.DOMAIN_NAME,
         cognitoIdentityPoolId: process.env.COGNITO_IDENTTITY_POOL_ID,
@@ -31,8 +36,10 @@ function getConfig() {
             targetUrl: process.env.OPEN_ID_TARGET_URL
         }
     };
+
     if (process.env.DEBUG) console.log('Configuration:');
     if (process.env.DEBUG) console.log(JSON.stringify(config));
+    if (!process.env.DISABLE_CONFIG_CACHE) configCache = config;
     return config;
 }
 
@@ -108,8 +115,9 @@ function getOpenIdClient(config, callback) {
     if (!config.openId.discoverUrl) {
         callback('env.OPEN_ID_DISCOVER_URL is not configured!');
     } else {
-        // if (!issuerPromise) issuerPromise = Issuer.discover(config.openId.discoverUrl);
+        if (issuerPromiseCache) return issuerPromiseCache;
         issuerPromise = Issuer.discover(config.openId.discoverUrl);
+        if (!process.env.DISABLE_CONFIG_CACHE) issuerPromiseCache = issuerPromise;
         issuerPromise.then(function (issuer) {
             const client = new issuer.Client({client_id: config.openId.clientId});
             callback(null, client);

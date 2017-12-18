@@ -1,7 +1,8 @@
 'use strict';
 
-const assert = require('assert');
+process.env.DISABLE_CONFIG_CACHE = true;
 
+const assert = require('assert');
 const proxyquire = require('proxyquire').noCallThru();
 
 const assumeAwsCredentials = {Credentials: {AccessKeyId: ''}};
