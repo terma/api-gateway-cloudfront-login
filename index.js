@@ -25,6 +25,7 @@ function getConfig() {
 
         openId: {
             discoverUrl: process.env.OPEN_ID_DISCOVER_URL,
+            login: process.env.OPEN_ID_LOGIN,
             clientId: process.env.OPEN_ID_CLIENT_ID,
             loginUrl: process.env.OPEN_ID_LOGIN_URL,
             targetUrl: process.env.OPEN_ID_TARGET_URL
@@ -45,7 +46,7 @@ function createCookieBuilder(url, maxAgeSec) {
     }
 }
 
-function createCloudFrontSignedCookie(config, callback) {
+function createCloudFrontSignedCookie(config, apiExpirationTimeSec, callback) {
     const cloudFrontSigner = new AWS.CloudFront.Signer(config.cloudFrontKeyId, config.cloudFrontPrivateKey);
     cloudFrontSigner.getSignedCookie({
         policy: JSON.stringify({
@@ -53,7 +54,7 @@ function createCloudFrontSignedCookie(config, callback) {
                 {
                     Resource: 'https://' + config.domain + '/*',
                     Condition: {
-                        DateLessThan: {'AWS:EpochTime': Math.round(Date.now() / 1000) + config.loginDuration}
+                        DateLessThan: {'AWS:EpochTime': apiExpirationTimeSec}
                     }
                 }
             ]
@@ -74,14 +75,16 @@ function responseError(err, callback) {
 
 function exchangeOpenIdTokenToAwsUser(config, idToken, callback) {
     AWS.config.region = config.awsRegion;
+    const logins = {};
+    logins[config.openId.login] = idToken;
     AWS.config.credentials = new AWS.CognitoIdentityCredentials({
         IdentityPoolId: config.cognitoIdentityPoolId,
-        Logins: {'...': idToken}
+        Logins: logins
     });
     AWS.config.credentials.get(function (err) {
         if (process.env.DEBUG) console.log('AWS Cognito Identity Expire Time: ' + AWS.config.credentials.expireTime);
         tryCatchResponse(function () {
-            callback(err);
+            callback(err, Math.round(AWS.config.credentials.expireTime / 1000));
         }, callback);
     });
 }
@@ -138,7 +141,7 @@ function getAuthorizationUrl(config, openIdClient, customTargetUrl, callback) {
             redirect_uri: config.openId.loginUrl + (customTargetUrl ? '?customTargetUrl=' + customTargetUrl : ''),
             scope: 'openid',
             response_type: 'id_token',
-            nonce: 'f'
+            nonce: 'z'
         });
         callback(null, authorizationUrl);
     } else {
@@ -146,11 +149,11 @@ function getAuthorizationUrl(config, openIdClient, customTargetUrl, callback) {
     }
 }
 
-function responseRedirectWithData(config, cloudFrontSignedCookies, assumeAwsCredentials, customTargetUrl, callback) {
+function responseRedirectWithData(config, apiExpirationTimeSec, cloudFrontSignedCookies, assumeAwsCredentials, customTargetUrl, callback) {
     const url = customTargetUrl ? customTargetUrl : config.openId.targetUrl;
     if (!url) responseError('env.OPEN_ID_TARGET_URL or customTargetUrl not configured!', callback);
     else {
-        const toCookie = createCookieBuilder(url, config.loginDuration);
+        const toCookie = createCookieBuilder(url, apiExpirationTimeSec);
 
         const cookies = [
             toCookie('CloudFront-Policy', cloudFrontSignedCookies['CloudFront-Policy'], true),
@@ -219,13 +222,13 @@ exports.handler = function (event, context, callback) {
                 });
             });
         } else {
-            exchangeOpenIdTokenToAwsUser(config, idToken, function (err) {
+            exchangeOpenIdTokenToAwsUser(config, idToken, function (err, apiExpirationTimeSec) {
                 if (err) responseError(err, callback);
-                else createCloudFrontSignedCookie(config, function (err, cloudFrontSignedCookies) {
+                else createCloudFrontSignedCookie(config, apiExpirationTimeSec, function (err, cloudFrontSignedCookies) {
                     if (err) responseError(err, callback);
                     else assumeRole(config, function (err, assumeAwsCredentials) {
                         if (err) responseError(err, callback);
-                        else responseRedirectWithData(config, cloudFrontSignedCookies, assumeAwsCredentials, customTargetUrl, callback);
+                        else responseRedirectWithData(config, apiExpirationTimeSec, cloudFrontSignedCookies, assumeAwsCredentials, customTargetUrl, callback);
                     });
                 });
             });
