@@ -10,22 +10,16 @@ const assumeAwsCredentials = {
     }
 
 };
-const stsMock = {
-    assumeRole: function (options, callback) {
-        callback(null, assumeAwsCredentials);
-    }
-};
+const stsMock = {};
+
+const cognitoIdentityCredentialsMock = {};
+const cloudFrontSignerMock = {};
 
 const awsSdkMock = {
     config: {},
     CloudFront: {
         Signer: function () {
-            return {
-                getSignedCookie: function (config, callback) {
-                    const cloudFrontSignedCookies = {};
-                    callback(null, cloudFrontSignedCookies);
-                }
-            }
+            return cloudFrontSignerMock;
         }
     },
 
@@ -34,11 +28,7 @@ const awsSdkMock = {
     },
 
     CognitoIdentityCredentials: function () {
-        return {
-            get: function (callback) {
-                callback();
-            }
-        }
+        return cognitoIdentityCredentialsMock;
     }
 };
 
@@ -80,8 +70,21 @@ function assertResponse(event, done, statusCode, body) {
 const loginProviderHost = 'http://login-provider.test';
 
 beforeEach(function () {
+    stsMock.assumeRole = function (options, callback) {
+        callback(null, assumeAwsCredentials);
+    };
+
+    cloudFrontSignerMock.getSignedCookie = function (config, callback) {
+        const cloudFrontSignedCookies = {};
+        callback(null, cloudFrontSignedCookies);
+    };
+
+    cognitoIdentityCredentialsMock.get = function (callback) {
+        callback();
+    };
+
     openIdClientMock.Issuer.discover = function () {
-        return new Promise(function (resolve, reject) {
+        return new Promise(function (resolve) {
             resolve(issuerMock);
         });
     };
@@ -94,6 +97,24 @@ beforeEach(function () {
 });
 
 describe('api-gateway-cloudfront-login', function () {
+
+    it('throw error if event is null', function (done) {
+        try {
+            login.handler(null, null, null);
+            done('Where is my error!');
+        } catch (e) {
+            done();
+        }
+    });
+
+    it('throw error if callback is null', function (done) {
+        try {
+            login.handler({}, null, null);
+            done('Where is my error!');
+        } catch (e) {
+            done();
+        }
+    });
 
     it('response with error if env.OPEN_ID_DISCOVER_URL not configured', function (done) {
         delete process.env.OPEN_ID_DISCOVER_URL;
@@ -125,6 +146,37 @@ describe('api-gateway-cloudfront-login', function () {
         assertResponse(event, done, 500, 'Can\'t extract domain from aa!');
     });
 
+    it('response error if fails during cognito', function (done) {
+        process.env.OPEN_ID_TARGET_URL = 'http://target.url';
+        process.env.COGNITO_IDENTTITY_POOL_ID = 'us-east-1:f0fdfdcd-a5b5-4978-ab5c-a49c48d4db60';
+        cognitoIdentityCredentialsMock.get = function (callback) {
+            callback('Cognito error!');
+        };
+        const event = {queryStringParameters: {id_token: 'sss'}};
+        assertResponse(event, done, 500, 'Cognito error!');
+    });
+
+    it('response error if fails during signed cookie creation', function (done) {
+        process.env.OPEN_ID_TARGET_URL = 'http://target.url';
+        process.env.COGNITO_IDENTTITY_POOL_ID = 'us-east-1:f0fdfdcd-a5b5-4978-ab5c-a49c48d4db60';
+        cloudFrontSignerMock.getSignedCookie = function (config, callback) {
+            callback('CloudFront error!', null);
+        };
+        const event = {queryStringParameters: {id_token: 'sss'}};
+        assertResponse(event, done, 500, 'CloudFront error!');
+    });
+
+    it('response error if fails during assume role', function (done) {
+        process.env.OPEN_ID_TARGET_URL = 'http://target.url';
+        process.env.COGNITO_IDENTTITY_POOL_ID = 'us-east-1:f0fdfdcd-a5b5-4978-ab5c-a49c48d4db60';
+        process.env.ASSUME_ROLE = 'assume-role';
+        stsMock.assumeRole = function (options, callback) {
+            callback('Assume error!', null);
+        };
+        const event = {queryStringParameters: {id_token: 'sss'}};
+        assertResponse(event, done, 500, 'Assume error!');
+    });
+
     it('redirect to login provider when id_token not specified', function (done) {
         process.env.OPEN_ID_LOGIN_URL = 'back';
         assertResponse(null, done, 200, '<html><head><meta http-equiv="refresh" content="0; url=http://open-id.test/authorization?redirect_uri=back"/></head><body>Wait a second or <a href="http://open-id.test/authorization?redirect_uri=back">proceed to login</a></body></html>');
@@ -137,11 +189,7 @@ describe('api-gateway-cloudfront-login', function () {
             process.env.OPEN_ID_TARGET_URL = 'http://target.url';
             process.env.COGNITO_IDENTTITY_POOL_ID = 'us-east-1:f0fdfdcd-a5b5-4978-ab5c-a49c48d4db60';
 
-            const event = {
-                queryStringParameters: {
-                    id_token: 'sss'
-                }
-            };
+            const event = {queryStringParameters: {id_token: 'sss'}};
             assertResponse(event, done, 301, null);
         });
 

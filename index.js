@@ -82,7 +82,7 @@ function exchangeOpenIdTokenToAwsUser(config, idToken, callback) {
         if (process.env.DEBUG) console.log('AWS Cognito Identity Expire Time: ' + AWS.config.credentials.expireTime);
         tryCatchResponse(function () {
             callback(err);
-        }, callback)
+        }, callback);
     });
 }
 
@@ -204,6 +204,7 @@ function responseRedirectWithData(config, cloudFrontSignedCookies, assumeAwsCred
 
 exports.handler = function (event, context, callback) {
     if (!event) throw new Error('Event parameter can\'t be null!');
+    if (!callback) throw new Error('Callback parameter can\'t be null!');
 
     tryCatchResponse(function () {
         const config = getConfig();

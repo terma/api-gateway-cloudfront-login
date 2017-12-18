@@ -4,7 +4,7 @@
   "description": "Login lambda which to generate CloudFront signed cookies and provide API Gateway AWS IAM login",
   "main": "index.js",
   "scripts": {
-    "test": "nyc mocha && nyc check-coverage --lines 95 --functions 95 --branches 80",
+    "test": "nyc mocha && nyc check-coverage --lines 95 --functions 95 --branches 85",
     "~test": "mocha --watch",
     "coverage": "nyc report --reporter=text-lcov | coveralls"
   },
