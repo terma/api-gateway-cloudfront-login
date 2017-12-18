@@ -36,10 +36,9 @@ function getConfig() {
 }
 
 function createCookieBuilder(url, maxAgeSec) {
-    if (!url) throw new Error('Provide not null/empty URL!');
     const secure = url.indexOf('https://') === 0;
     const m = url.match(/http[s]?:\/\/([a-z-0-9.]+)/i);
-    if (!m || m.length < 2) throw new Error('Can\'t extract domain from ' + url);
+    if (!m || m.length < 2) throw new Error('Can\'t extract domain from ' + url + '!');
     const domain = m[1];
     return function (name, value, isSecure) {
         return name + '=' + value + ';Domain=' + domain + ';Max-Age=' + maxAgeSec + ';Path=/;' + (secure ? 'Secure' : '') + (isSecure ? 'HttpOnly' : '');
@@ -63,7 +62,10 @@ function createCloudFrontSignedCookie(config, callback) {
 }
 
 function responseError(err, callback) {
-    if (err && err.message) err = err.stack;
+    if (err && err.message) {
+        err = process.env.DEBUG ? err.stack : err.message;
+    }
+
     callback(null, {
         statusCode: 500,
         body: !err || err.substr ? err : JSON.stringify(err)

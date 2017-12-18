@@ -118,6 +118,13 @@ describe('api-gateway-cloudfront-login', function () {
         assertResponse(null, done, 500, 'Test error!');
     });
 
+    it('response error if invalid env.OPEN_ID_TARGET_URL', function (done) {
+        process.env.OPEN_ID_LOGIN_URL = 'login.url';
+        process.env.OPEN_ID_TARGET_URL = 'aa';
+        const event = {queryStringParameters: {id_token: 'sss'}};
+        assertResponse(event, done, 500, 'Can\'t extract domain from aa!');
+    });
+
     it('redirect to login provider when id_token not specified', function (done) {
         process.env.OPEN_ID_LOGIN_URL = 'back';
         assertResponse(null, done, 200, '<html><head><meta http-equiv="refresh" content="0; url=http://open-id.test/authorization?redirect_uri=back"/></head><body>Wait a second or <a href="http://open-id.test/authorization?redirect_uri=back">proceed to login</a></body></html>');
@@ -153,7 +160,7 @@ describe('api-gateway-cloudfront-login', function () {
             assertResponse(event, done, 301, null);
         });
 
-        it('redirect to customTargetUrl if specifiec', function (done) {
+        it('redirect to customTargetUrl if specified', function (done) {
             process.env.OPEN_ID_DISCOVER_URL = loginProviderHost;
             process.env.OPEN_ID_LOGIN_URL = '???';
             process.env.OPEN_ID_TARGET_URL = 'http://target.url';
