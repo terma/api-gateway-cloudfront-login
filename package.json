@@ -1,6 +1,6 @@
 {
   "name": "api-gateway-cloudfront-login",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Login lambda which to generate CloudFront signed cookies and provide API Gateway AWS IAM login",
   "main": "index.js",
   "scripts": {
