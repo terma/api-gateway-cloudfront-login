@@ -96,7 +96,7 @@ beforeEach(function () {
     delete process.env.OPEN_ID_LOGIN_URL;
     delete process.env.OPEN_ID_TARGET_URL;
     delete process.env.ASSUME_ROLE;
-    delete process.env.COGNITO_IDENTTITY_POOL_ID;
+    delete process.env.COGNITO_IDENTITY_POOL_ID;
 });
 
 describe('api-gateway-cloudfront-login', function () {
@@ -151,7 +151,7 @@ describe('api-gateway-cloudfront-login', function () {
 
     it('response error if fails during cognito', function (done) {
         process.env.OPEN_ID_TARGET_URL = 'http://target.url';
-        process.env.COGNITO_IDENTTITY_POOL_ID = 'us-east-1:f0fdfdcd-a5b5-4978-ab5c-a49c48d4db60';
+        process.env.COGNITO_IDENTITY_POOL_ID = 'us-east-1:f0fdfdcd-a5b5-4978-ab5c-a49c48d4db60';
         cognitoIdentityCredentialsMock.get = function (callback) {
             callback('Cognito error!');
         };
@@ -161,7 +161,7 @@ describe('api-gateway-cloudfront-login', function () {
 
     it('response error if fails during signed cookie creation', function (done) {
         process.env.OPEN_ID_TARGET_URL = 'http://target.url';
-        process.env.COGNITO_IDENTTITY_POOL_ID = 'us-east-1:f0fdfdcd-a5b5-4978-ab5c-a49c48d4db60';
+        process.env.COGNITO_IDENTITY_POOL_ID = 'us-east-1:f0fdfdcd-a5b5-4978-ab5c-a49c48d4db60';
         cloudFrontSignerMock.getSignedCookie = function (config, callback) {
             callback('CloudFront error!', null);
         };
@@ -171,7 +171,7 @@ describe('api-gateway-cloudfront-login', function () {
 
     it('response error if fails during assume role', function (done) {
         process.env.OPEN_ID_TARGET_URL = 'http://target.url';
-        process.env.COGNITO_IDENTTITY_POOL_ID = 'us-east-1:f0fdfdcd-a5b5-4978-ab5c-a49c48d4db60';
+        process.env.COGNITO_IDENTITY_POOL_ID = 'us-east-1:f0fdfdcd-a5b5-4978-ab5c-a49c48d4db60';
         process.env.ASSUME_ROLE = 'assume-role';
         stsMock.assumeRole = function (options, callback) {
             callback('Assume error!', null);
@@ -217,7 +217,7 @@ describe('api-gateway-cloudfront-login', function () {
             process.env.OPEN_ID_DISCOVER_URL = loginProviderHost;
             process.env.OPEN_ID_LOGIN_URL = '???';
             process.env.OPEN_ID_TARGET_URL = 'http://target.url';
-            process.env.COGNITO_IDENTTITY_POOL_ID = 'us-east-1:f0fdfdcd-a5b5-4978-ab5c-a49c48d4db60';
+            process.env.COGNITO_IDENTITY_POOL_ID = 'us-east-1:f0fdfdcd-a5b5-4978-ab5c-a49c48d4db60';
             cognitoIdentityCredentialsMock.accessKeyId = 'accessKeyId';
             cognitoIdentityCredentialsMock.secretAccessKey = 'secretAccessKey';
             cognitoIdentityCredentialsMock.sessionToken = 'sessionToken';
@@ -250,7 +250,7 @@ describe('api-gateway-cloudfront-login', function () {
             process.env.OPEN_ID_LOGIN_URL = '???';
             process.env.OPEN_ID_TARGET_URL = 'http://target.url';
             process.env.OPEN_ID_LOGIN = 'logins';
-            process.env.COGNITO_IDENTTITY_POOL_ID = 'pool-id';
+            process.env.COGNITO_IDENTITY_POOL_ID = 'pool-id';
             const event = {queryStringParameters: {id_token: 'id-token'}};
             let cognitoIdentityCredentailsOptions = {};
             awsSdkMock.CognitoIdentityCredentials = function (options) {
@@ -271,7 +271,7 @@ describe('api-gateway-cloudfront-login', function () {
                 process.env.OPEN_ID_DISCOVER_URL = loginProviderHost;
                 process.env.OPEN_ID_LOGIN_URL = '???';
                 process.env.OPEN_ID_TARGET_URL = 'http://target.url';
-                process.env.COGNITO_IDENTTITY_POOL_ID = 'us-east-1:f0fdfdcd-a5b5-4978-ab5c-a49c48d4db60';
+                process.env.COGNITO_IDENTITY_POOL_ID = 'us-east-1:f0fdfdcd-a5b5-4978-ab5c-a49c48d4db60';
                 const event = {queryStringParameters: {id_token: 'sss'}};
                 login.handler(event, null, function (ignore, response) {
                     try {
@@ -297,7 +297,7 @@ describe('api-gateway-cloudfront-login', function () {
                 process.env.OPEN_ID_DISCOVER_URL = loginProviderHost;
                 process.env.OPEN_ID_LOGIN_URL = '???';
                 process.env.OPEN_ID_TARGET_URL = 'http://target.url';
-                process.env.COGNITO_IDENTTITY_POOL_ID = 'us-east-1:f0fdfdcd-a5b5-4978-ab5c-a49c48d4db60';
+                process.env.COGNITO_IDENTITY_POOL_ID = 'us-east-1:f0fdfdcd-a5b5-4978-ab5c-a49c48d4db60';
                 const event = {queryStringParameters: {id_token: 'sss'}};
                 cognitoIdentityCredentialsMock.expireTime = 25000;
                 login.handler(event, null, function (ignore, response) {
@@ -325,7 +325,7 @@ describe('api-gateway-cloudfront-login', function () {
             process.env.OPEN_ID_DISCOVER_URL = loginProviderHost;
             process.env.OPEN_ID_LOGIN_URL = '???';
             process.env.OPEN_ID_TARGET_URL = 'hTTP://tarGET.url';
-            process.env.COGNITO_IDENTTITY_POOL_ID = 'us-east-1:f0fdfdcd-a5b5-4978-ab5c-a49c48d4db60';
+            process.env.COGNITO_IDENTITY_POOL_ID = 'us-east-1:f0fdfdcd-a5b5-4978-ab5c-a49c48d4db60';
 
             const event = {queryStringParameters: {id_token: 'sss'}};
             assertStatusCodeAndBody(event, done, 301, null);
@@ -335,7 +335,7 @@ describe('api-gateway-cloudfront-login', function () {
             process.env.OPEN_ID_DISCOVER_URL = loginProviderHost;
             process.env.OPEN_ID_LOGIN_URL = '???';
             process.env.OPEN_ID_TARGET_URL = 'https://target.url';
-            process.env.COGNITO_IDENTTITY_POOL_ID = 'us-east-1:f0fdfdcd-a5b5-4978-ab5c-a49c48d4db60';
+            process.env.COGNITO_IDENTITY_POOL_ID = 'us-east-1:f0fdfdcd-a5b5-4978-ab5c-a49c48d4db60';
 
             const event = {queryStringParameters: {id_token: 'sss'}};
             assertStatusCodeAndBody(event, done, 301, null);
@@ -345,7 +345,7 @@ describe('api-gateway-cloudfront-login', function () {
             process.env.OPEN_ID_DISCOVER_URL = loginProviderHost;
             process.env.OPEN_ID_LOGIN_URL = '???';
             process.env.OPEN_ID_TARGET_URL = 'http://target.url';
-            process.env.COGNITO_IDENTTITY_POOL_ID = 'us-east-1:f0fdfdcd-a5b5-4978-ab5c-a49c48d4db60';
+            process.env.COGNITO_IDENTITY_POOL_ID = 'us-east-1:f0fdfdcd-a5b5-4978-ab5c-a49c48d4db60';
             process.env.ASSUME_ROLE = 'assume-role';
             stsMock.assumeRole = function (options, callback) {
                 callback(null, {
@@ -379,7 +379,7 @@ describe('api-gateway-cloudfront-login', function () {
             process.env.OPEN_ID_DISCOVER_URL = loginProviderHost;
             process.env.OPEN_ID_LOGIN_URL = '???';
             process.env.OPEN_ID_TARGET_URL = 'http://target.url';
-            process.env.COGNITO_IDENTTITY_POOL_ID = 'us-east-1:f0fdfdcd-a5b5-4978-ab5c-a49c48d4db60';
+            process.env.COGNITO_IDENTITY_POOL_ID = 'us-east-1:f0fdfdcd-a5b5-4978-ab5c-a49c48d4db60';
             process.env.ASSUME_ROLE = 'assume-role';
             let assumeRoleOptions = {};
             stsMock.assumeRole = function (options, callback) {
@@ -400,7 +400,7 @@ describe('api-gateway-cloudfront-login', function () {
             process.env.OPEN_ID_DISCOVER_URL = loginProviderHost;
             process.env.OPEN_ID_LOGIN_URL = '???';
             process.env.OPEN_ID_TARGET_URL = 'http://target.url';
-            process.env.COGNITO_IDENTTITY_POOL_ID = 'us-east-1:f0fdfdcd-a5b5-4978-ab5c-a49c48d4db60';
+            process.env.COGNITO_IDENTITY_POOL_ID = 'us-east-1:f0fdfdcd-a5b5-4978-ab5c-a49c48d4db60';
 
             const event = {
                 queryStringParameters: {

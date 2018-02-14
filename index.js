@@ -21,7 +21,7 @@ function getConfig() {
 
     const config = {
         domain: process.env.DOMAIN_NAME,
-        cognitoIdentityPoolId: process.env.COGNITO_IDENTTITY_POOL_ID,
+        cognitoIdentityPoolId: process.env.COGNITO_IDENTITY_POOL_ID,
         awsRegion: process.env.REGION || 'us-west-2',
         roleToAssume: process.env.ASSUME_ROLE,
         cloudFrontKeyId: process.env.CLOUD_FRONT_KEY_ID,
