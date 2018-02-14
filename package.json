@@ -1,6 +1,6 @@
 {
   "name": "api-gateway-cloudfront-login",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Login lambda which to generate CloudFront signed cookies and provide API Gateway AWS IAM login",
   "main": "index.js",
   "scripts": {
@@ -24,13 +24,16 @@
     "Login",
     "Assume"
   ],
-  "author": "terma",
+  "author": {
+    "name": "terma",
+    "email": "artem.stasuk@gmail.com"
+  },
   "license": "MIT",
   "dependencies": {
-    "aws-sdk": "^2.167.0",
     "openid-client": "^1.18.2"
   },
   "devDependencies": {
+    "aws-sdk": "^2.167.0",
     "coveralls": "^3.0.0",
     "mocha": "^4.0.1",
     "nyc": "^11.3.0",
