@@ -100,7 +100,7 @@ function assumeRole(config, callback) {
     if (!config.roleToAssume) {
         callback();
     } else {
-        const sts = AWS.STS();
+        const sts = new AWS.STS();
         // default expiration time for assumed credentials is 1 h
         sts.assumeRole({
             RoleArn: config.roleToAssume,
