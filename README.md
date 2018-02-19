@@ -19,18 +19,18 @@
 For CloudFormation configure properties as env variables [More](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-lambda-function.html#cfn-lambda-function-environment)
 
 ```
-DOMAIN_NAME
-COGNITO_IDENTITY_POOL_ID
-REGION - optional default 'us-west-2'
-ASSUME_ROLE - optional if specified additional assume provided role and return credentials
-CLOUD_FRONT_KEY_ID
-CLOUD_FRONT_PRIVATE_KEY
-OPEN_ID_DISCOVER_URL
-OPEN_ID_LOGIN
-OPEN_ID_CLIENT_ID
-OPEN_ID_LOGIN_URL
-OPEN_ID_TARGET_URL
-DEBUG - optional by default false
+DOMAIN_NAME string
+COGNITO_IDENTITY_POOL_ID string
+REGION string - optional default 'us-west-2'
+ASSUME_ROLE string - optional if specified additional assume provided role and return credentials
+CLOUD_FRONT_KEY_ID string
+CLOUD_FRONT_PRIVATE_KEY string
+OPEN_ID_DISCOVER_URL string
+OPEN_ID_LOGIN string
+OPEN_ID_CLIENT_ID string
+OPEN_ID_LOGIN_URL string
+OPEN_ID_TARGET_URL string
+DEBUG boolean - optional by default false
 ```
 
 ### Example 
